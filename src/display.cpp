@@ -130,20 +130,20 @@ extern logging::Logger logger;
                 break;
         }
 
-        sprite.fillRect(xPos, yPos, wide, height, baseColor);           // Dibuja el fondo del botón
-        sprite.fillRect(xPos, yPos + height - 2, wide, 2, darkColor);   // Línea inferior
-        sprite.fillRect(xPos, yPos, wide, 2, lightColor);               // Línea superior
-        sprite.fillRect(xPos, yPos, 2, height, lightColor);             // Línea izquierda
-        sprite.fillRect(xPos + wide - 2, yPos, 2, height, darkColor);   // Línea derecha
+        sprite.fillRect(xPos, yPos, wide, height, baseColor);           // Draw the background of the button
+        sprite.fillRect(xPos, yPos + height - 2, wide, 2, darkColor);   // Bottom line
+        sprite.fillRect(xPos, yPos, wide, 2, lightColor);               // Top line
+        sprite.fillRect(xPos, yPos, 2, height, lightColor);             // Left line
+        sprite.fillRect(xPos + wide - 2, yPos, 2, height, darkColor);   // Right line
 
         sprite.setTextSize(2);
         sprite.setTextColor(TFT_WHITE, baseColor);
 
-        // Calcula la posición del texto para que esté centrado
-        int textWidth = sprite.textWidth(buttonText);           // Ancho del texto
-        int textHeight = 16;                                    // Altura aproximada (depende de `setTextSize`)
-        int textX = xPos + (wide - textWidth) / 2;              // Centrado horizontal
-        int textY = yPos + (height - textHeight) / 2;           // Centrado vertical
+        // Calculate the text position so that it is centered
+        int textWidth = sprite.textWidth(buttonText);           // Text width
+        int textHeight = 16;                                    // Approximate height (depends on 'setTextSize')
+        int textX = xPos + (wide - textWidth) / 2;              // Horizontal centering
+        int textY = yPos + (height - textHeight) / 2;           // Vertical centering
 
         sprite.drawString(buttonText, textX, textY);
     }
