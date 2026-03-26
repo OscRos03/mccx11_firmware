@@ -117,6 +117,8 @@ public:
     bool    useKISS;
 };
 
+enum class TrackerMethod {wifi,gps};    // think this is how you do it
+
 
 class Configuration {
 public:
@@ -131,6 +133,7 @@ public:
     std::vector<LoraType>   loraTypes;
     PTT                     ptt;
     BLUETOOTH               bluetooth;
+    TrackerMethod           trackerMethod;
     
     bool    simplifiedTrackerMode;
     int     sendCommentAfterXBeacons;

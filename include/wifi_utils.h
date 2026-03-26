@@ -23,6 +23,7 @@
 
 namespace WIFI_Utils {
 
+    void networkScanner();
     void startAutoAP();
     void checkIfWiFiAP();
 

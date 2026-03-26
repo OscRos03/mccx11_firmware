@@ -115,6 +115,7 @@ bool        miceActive              = false;
 bool        smartBeaconActive       = true;
 
 uint32_t    lastGPSTime             = 0;
+TrackerMethod trackerMethod;
 
 APRSPacket                          lastReceivedPacket;
 
@@ -139,7 +140,7 @@ void setup() {
     STATION_Utils::nearStationInit();
     startupScreen(loraIndex, versionDate);
 
-    WIFI_Utils::checkIfWiFiAP();
+    WIFI_Utils::networkScanner();
 
     MSG_Utils::loadNumMessages();
     GPS_Utils::setup();
@@ -230,7 +231,7 @@ void loop() {
     STATION_Utils::checkListenedStationsByTimeAndDelete();
 
     lastTx = millis() - lastTxTime;
-    if (gpsIsActive) {
+    if (gpsIsActive) {  // gnss active
         GPS_Utils::getData();
         bool gps_time_update = gps.time.isUpdated();
         bool gps_loc_update  = gps.location.isUpdated();
@@ -249,10 +250,13 @@ void loop() {
         if (sendUpdate && gps_loc_update) STATION_Utils::sendBeacon();
         if (gps_time_update) SMARTBEACON_Utils::checkInterval(currentSpeed);
 
-        if (millis() - refreshDisplayTime >= 1000 || gps_time_update) {
+        if ((millis() - refreshDisplayTime >= 1000 || gps_time_update) && Config.trackerMethod == TrackerMethod::gps) {
             GPS_Utils::checkStartUpFrames();
             MENU_Utils::showOnScreen();
             refreshDisplayTime = millis();
+        }
+        if (Config.trackerMethod == TrackerMethod::wifi) {
+            WIFI_Utils::networkScanner();
         }
         SLEEP_Utils::checkIfGPSShouldSleep();
     } else {

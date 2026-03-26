@@ -24,11 +24,27 @@
 
 extern      Configuration       Config;
 extern      logging::Logger     logger;
+extern      TrackerMethod       trackerMethod;
 
 uint32_t    noClientsTime        = 0;
 
 
 namespace WIFI_Utils {
+
+    void networkScanner(){
+        byte numOfNW = WiFi.scanNetworks();
+        if (numOfNW == 0) {
+            Serial.println("no nearby networks");
+        } else {
+            for (int i=0; i<numOfNW; i++) {
+                Serial.printf("Network #%d SSID: %s RSSI: %d \n\n", i+1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
+                if (WiFi.SSID(i) == "TP-Link_AC1C_2.4GHz") {    // naive approach
+                    Serial.print("Tracker is home.");
+                }
+            }
+        }
+        delay(5000);
+    }
 
     void startAutoAP() {
         WiFi.mode(WIFI_MODE_NULL);
@@ -37,7 +53,7 @@ namespace WIFI_Utils {
     }
 
     void checkIfWiFiAP() {
-        if (Config.wifiAP.active || Config.beacons[0].callsign == "NOCALL-7"){
+        if (Config.wifiAP.active || Config.beacons[0].callsign == "TEST-7"){
             displayShow(" LoRa APRS", "    ** WEB-CONF **","", "WiFiAP:LoRaTracker-AP", "IP    :   192.168.4.1","");
             logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "WebConfiguration Started!");
             startAutoAP();
@@ -49,6 +65,7 @@ namespace WIFI_Utils {
                     if (noClientsTime == 0) {
                         noClientsTime = millis();
                     } else if ((millis() - noClientsTime) > 2 * 60 * 1000) {
+                        // logger.log(logging::LoggerLevel::LOGGER_INFO, "Main","Eggg");
                         logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "WebConfiguration Stopped!");
                         displayShow("", "", "  STOPPING WiFi AP", 2000);
                         Config.wifiAP.active = false;

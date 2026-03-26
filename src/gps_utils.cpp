@@ -44,6 +44,7 @@ extern Beacon               *currentBeacon;
 extern logging::Logger      logger;
 extern bool                 sendUpdate;
 extern bool		            sendStandingUpdate;
+extern TrackerMethod        trackerMethod;
 
 extern uint32_t             lastTxTime;
 extern uint32_t             txInterval;
@@ -137,10 +138,14 @@ namespace GPS_Utils {
     void checkStartUpFrames() {
         if (disableGPS) return;
         if ((millis() > 10000 && gps.charsProcessed() < 10)) {
-            logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "GPS",
-                        "No GPS frames detected! Try to reset the GPS Chip with this "
-                        "firmware: https://github.com/richonguzman/TTGO_T_BEAM_GPS_RESET");
-            displayShow("ERROR", "No GPS frames!", "Reset the GPS Chip", 2000);
+            // old code for logging that gps can't get signal
+            // logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "GPS",
+            //             "No GPS frames detected! Try to reset the GPS Chip with this "
+            //             "firmware: https://github.com/richonguzman/TTGO_T_BEAM_GPS_RESET");
+            // displayShow("ERROR", "No GPS frames!", "Reset the GPS Chip", 2000);
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS", "No GPS signal, switching to WiFi scanning...");
+            Config.trackerMethod = TrackerMethod::wifi;
+            return;
         }
     }
 

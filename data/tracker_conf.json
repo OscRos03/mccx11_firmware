@@ -1,7 +1,7 @@
 {
 	"beacons": [
 		{
-			"callsign": "NOCALL-7",
+			"callsign": "TEST-7",
 			"gpsEcoMode": false,
 			"symbol": "[",
 			"overlay": "/",
