@@ -125,6 +125,7 @@ logging::Logger                     logger;
 extern bool gpsIsActive;
 
 void setup() {
+    Config.trackerMethod = TrackerMethod::wifi;
     Serial.begin(115200);
 
     #ifndef DEBUG
@@ -140,7 +141,7 @@ void setup() {
     STATION_Utils::nearStationInit();
     startupScreen(loraIndex, versionDate);
 
-    WIFI_Utils::networkScanner();
+    // WIFI_Utils::networkScanner(); // doesnt belong in setup, should the old AP func be here still?
 
     MSG_Utils::loadNumMessages();
     GPS_Utils::setup();
@@ -231,7 +232,7 @@ void loop() {
     STATION_Utils::checkListenedStationsByTimeAndDelete();
 
     lastTx = millis() - lastTxTime;
-    if (gpsIsActive) {  // gnss active
+    if (gpsIsActive && Config.trackerMethod == TrackerMethod::gps) {
         GPS_Utils::getData();
         bool gps_time_update = gps.time.isUpdated();
         bool gps_loc_update  = gps.location.isUpdated();
@@ -255,18 +256,28 @@ void loop() {
             MENU_Utils::showOnScreen();
             refreshDisplayTime = millis();
         }
-        if (Config.trackerMethod == TrackerMethod::wifi) {
-            WIFI_Utils::networkScanner();
-        }
         SLEEP_Utils::checkIfGPSShouldSleep();
-    } else {
-        if (millis() - lastGPSTime > txInterval) {
-            SLEEP_Utils::gpsWakeUp();
-        }
-        STATION_Utils::checkStandingUpdateTime();
-        if (millis() - refreshDisplayTime >= 1000) {
-            MENU_Utils::showOnScreen();
-            refreshDisplayTime = millis();
-        }
+    } 
+    // else {
+    //     if (millis() - lastGPSTime > txInterval) {
+    //         SLEEP_Utils::gpsWakeUp();
+    //     }
+    //     STATION_Utils::checkStandingUpdateTime();
+    //     if (millis() - refreshDisplayTime >= 1000) {
+    //         MENU_Utils::showOnScreen();
+    //         refreshDisplayTime = millis();
+    //     }
+    // }
+    else if (Config.trackerMethod == TrackerMethod::wifi) {
+        WIFI_Utils::networkScanner();
     }
+    else {
+        // currently probably cant be else
+        // sleep for a while then attempt again
+    }
+    logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"SLEEP","Going to sleep...");
+    long DEEP_SLEEP_TIME_SEC = 60; // 10 seconds
+    esp_sleep_enable_timer_wakeup(1000000ULL * DEEP_SLEEP_TIME_SEC);
+    delay(500);
+    esp_deep_sleep_start();
 }

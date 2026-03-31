@@ -249,7 +249,7 @@ namespace STATION_Utils {
         } else {
             packet += "**LowVoltagePowerOff**";
         }
-
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS","checking status -- found new location");
         displayShow("<<< TX >>>", "", packet, 100);
         LoRa_Utils::sendNewPacket(packet);
 

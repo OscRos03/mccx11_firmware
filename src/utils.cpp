@@ -117,6 +117,7 @@ namespace Utils {
                 uint32_t currentTime = millis();
                 uint32_t statusTx = currentTime - statusTime;
                 lastTx = currentTime - lastTxTime;
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS","checking status -- found new location");
                 if (statusTx > 10 * 60 * 1000 && lastTx > 10 * 1000) {
                     LoRa_Utils::sendNewPacket(APRSPacketLib::generateStatusPacket(currentBeacon->callsign, "APLRT1", Config.path, currentBeacon->status));
                     statusUpdate = false;

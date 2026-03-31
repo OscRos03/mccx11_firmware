@@ -25,6 +25,7 @@
 extern      Configuration       Config;
 extern      logging::Logger     logger;
 extern      TrackerMethod       trackerMethod;
+String      home                = "TP-Link_AC1C_2.4GHz";
 
 uint32_t    noClientsTime        = 0;
 
@@ -32,18 +33,45 @@ uint32_t    noClientsTime        = 0;
 namespace WIFI_Utils {
 
     void networkScanner(){
-        byte numOfNW = WiFi.scanNetworks();
-        if (numOfNW == 0) {
-            Serial.println("no nearby networks");
-        } else {
-            for (int i=0; i<numOfNW; i++) {
-                Serial.printf("Network #%d SSID: %s RSSI: %d \n\n", i+1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
-                if (WiFi.SSID(i) == "TP-Link_AC1C_2.4GHz") {    // naive approach
-                    Serial.print("Tracker is home.");
-                }
+        uint32_t before = millis();
+        int channels[] = {1,6,11,13};  // test with different channels and order
+        int sizeOfArray = sizeof(channels)/sizeof(channels[0]);
+        bool found = false;
+
+        for (int i = 0; i<sizeOfArray; i++) {
+            byte networksInChannel = WiFi.scanNetworks(false,false,false,200,channels[i],"NETGEAR94");
+            Serial.printf("%d networks in channel %d\n",networksInChannel, channels[i]);
+            if (networksInChannel == 1) {
+                found = true;
+                break;
+            }
+            WiFi.scanDelete();
+            Serial.print("\n\n");
+        }
+        
+        
+        // if (numOfNW == 0) {
+        //     Serial.println("no nearby networks");
+        //     Config.trackerMethod = TrackerMethod::gps;
+        // } else {
+        //     for (int i=0; i<numOfNW; i++) {
+                // Serial.printf("Network #%d SSID: %s RSSI: %d \n\n", i+1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
+        //         if (WiFi.SSID(i) == home) {    // naive approach
+        //             Serial.println("Tracker is home.\n");
+        //         }
+        //     }
+        // }
+        uint32_t after = millis();
+        switch (found) {
+            case true: {
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","On home network");
+            }
+            case false: {
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found");
             }
         }
-        delay(5000);
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","time to find networks: %d in ms",after-before);
+        //delay(5000);
     }
 
     void startAutoAP() {
@@ -64,7 +92,7 @@ namespace WIFI_Utils {
                 } else {
                     if (noClientsTime == 0) {
                         noClientsTime = millis();
-                    } else if ((millis() - noClientsTime) > 2 * 60 * 1000) {
+                    } else if ((millis() - noClientsTime) > 2 * 60 * 2000) {
                         // logger.log(logging::LoggerLevel::LOGGER_INFO, "Main","Eggg");
                         logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "WebConfiguration Stopped!");
                         displayShow("", "", "  STOPPING WiFi AP", 2000);
