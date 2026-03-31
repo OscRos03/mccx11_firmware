@@ -232,7 +232,7 @@ extern logging::Logger logger;
 
 void displaySetup() {
     delay(500);
-    STATION_Utils::loadIndex(2);    // Screen Brightness value
+    STATION_Utils::loadIndex(STATION_Utils::IndexType::brightness);    // Screen Brightness value
     #ifdef HAS_TFT
         tft.init();
         tft.begin();

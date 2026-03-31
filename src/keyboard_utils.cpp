@@ -321,7 +321,7 @@ namespace KEYBOARD_Utils {
             }
             displayShow("   INFO", "", "  CHANGING CALLSIGN!", newCallsign, profileLabel, "", 2000);
             
-            STATION_Utils::saveIndex(0, myBeaconsIndex);
+            STATION_Utils::saveIndex(STATION_Utils::IndexType::callsign, myBeaconsIndex);
             sendStartTelemetry = true;
             if (menuDisplay == 200) menuDisplay = 20;
         } else if ((menuDisplay >= 1 && menuDisplay <= 6) || (menuDisplay >= 11 &&menuDisplay <= 13) || (menuDisplay >= 20 && menuDisplay <= 27) || (menuDisplay >= 40 && menuDisplay <= 41)) {
@@ -362,7 +362,7 @@ namespace KEYBOARD_Utils {
 
         else if (menuDisplay == 210) {
             LoRa_Utils::changeFreq();
-            STATION_Utils::saveIndex(1, loraIndex);
+            STATION_Utils::saveIndex(STATION_Utils::IndexType::freq, loraIndex);
             menuDisplay = 21;
         } else if (menuDisplay == 220) {
             displayEcoMode = !displayEcoMode;
@@ -400,7 +400,7 @@ namespace KEYBOARD_Utils {
                 analogWrite(TFT_BL, screenBrightness);
             #endif
             displayShow("  SCREEN", "", "SCREEN BRIGHTNESS " + MENU_Utils::screenBrightnessAsString(screenBrightness), 1000);
-            STATION_Utils::saveIndex(2, screenBrightness);
+            STATION_Utils::saveIndex(STATION_Utils::IndexType::brightness, screenBrightness);
             #ifdef HAS_JOYSTICK
                 menuDisplay = 221;
             #endif

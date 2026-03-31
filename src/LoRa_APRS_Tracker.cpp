@@ -136,8 +136,8 @@ void setup() {
     displaySetup();
     POWER_Utils::externalPinSetup();
 
-    STATION_Utils::loadIndex(0);    // callsign Index
-    STATION_Utils::loadIndex(1);    // lora freq settins Index
+    STATION_Utils::loadIndex(STATION_Utils::IndexType::callsign);    // callsign Index
+    STATION_Utils::loadIndex(STATION_Utils::IndexType::freq);    // lora freq settins Index
     STATION_Utils::nearStationInit();
     startupScreen(loraIndex, versionDate);
 
