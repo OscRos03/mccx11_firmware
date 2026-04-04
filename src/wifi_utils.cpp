@@ -29,22 +29,44 @@ String      home                = "TP-Link_AC1C_2.4GHz";
 
 uint32_t    noClientsTime        = 0;
 
+struct savedNetwork {
+    String SSID;
+    String BSSID;
+    int32_t RSSI;
+};
+
 
 namespace WIFI_Utils {
 
     void networkScanner(){
         uint32_t before = millis();
-        int channels[] = {1,6,11,13};  // test with different channels and order
+        std::vector<savedNetwork> allSavedNetworks; 
+        int channels[] = {1,6,7,11,13};  // test with different channels and order
         int sizeOfArray = sizeof(channels)/sizeof(channels[0]);
         bool found = false;
+        byte networksInChannel;
 
         for (int i = 0; i<sizeOfArray; i++) {
-            byte networksInChannel = WiFi.scanNetworks(false,false,false,200,channels[i],"NETGEAR94");
+            networksInChannel = WiFi.scanNetworks(false,false,false,200,channels[i]);
             Serial.printf("%d networks in channel %d\n",networksInChannel, channels[i]);
-            if (networksInChannel == 1) {
-                found = true;
-                break;
+            
+            for (int j = 0; j < networksInChannel; j++) {
+                // Serial.printf("BSSID: %s\n",WiFi.BSSIDstr(j).c_str());
+                // Serial.printf("SSID: %s\n",WiFi.SSID(j).c_str());
+                
+                savedNetwork network;
+                network.SSID = WiFi.SSID(j);
+                network.BSSID = WiFi.BSSIDstr(j);
+                network.RSSI = WiFi.RSSI(j);
+                allSavedNetworks.push_back(network);
+                
+                if (WiFi.SSID(j) == "Månby") { // naive approach for a "home network"
+                    found = true;
+                    break;
+                }
+                
             }
+            if (found) break;
             WiFi.scanDelete();
             Serial.print("\n\n");
         }
@@ -65,9 +87,14 @@ namespace WIFI_Utils {
         switch (found) {
             case true: {
                 logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","On home network");
+                break;
             }
             case false: {
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found");
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found, discovered networks:");
+                for (int i = 0; i < allSavedNetworks.size(); i++) {
+                    Serial.printf("Network #%d SSID: %s BSSID: %s\n",i,allSavedNetworks[i].SSID.c_str(),allSavedNetworks[i].BSSID.c_str());
+                }
+                break;
             }
         }
         logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","time to find networks: %d in ms",after-before);

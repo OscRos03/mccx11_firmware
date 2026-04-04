@@ -276,7 +276,7 @@ void loop() {
         // sleep for a while then attempt again
     }
     logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"SLEEP","Going to sleep...");
-    long DEEP_SLEEP_TIME_SEC = 60; // 10 seconds
+    long DEEP_SLEEP_TIME_SEC = 60; // 60 seconds
     esp_sleep_enable_timer_wakeup(1000000ULL * DEEP_SLEEP_TIME_SEC);
     delay(500);
     esp_deep_sleep_start();
