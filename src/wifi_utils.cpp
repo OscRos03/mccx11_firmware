@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with LoRa APRS Tracker. If not, see <https://www.gnu.org/licenses/>.
  */
-
 #include <logger.h>
 #include <WiFi.h>
 #include "configuration.h"
@@ -37,6 +36,47 @@ struct savedNetwork {
 
 
 namespace WIFI_Utils {
+
+    // void networkAPIRequest(String bssid) {
+    //     CURL* curl;
+    //     CURLcode res;
+    //     String buffer;
+    //     String url = "https://api.mylnikov.org/geolocation/wifi?v=1.1&data=open&bssid=" + bssid;
+
+    //     curl = curl_easy_init();
+    //     if (curl) {
+    //         curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
+
+    //         curl_easy_setopt(curl,CURLOPT_USERAGENT,"libcurl-agent/1.0");
+
+    //         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, jsonParser);
+    //         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+
+    //         res = curl_easy_perform(curl);
+
+    //         if (res != CURLE_OK) {
+    //             logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN,"CURL","request failed");
+    //         } else {
+    //             try {
+    //                 auto j = nlohmann::json::parse(buffer);
+
+    //                 if(j["result"] == 200) {
+    //                     Serial.print("Success");
+    //                 } else if (j["result"] == 404) {
+    //                     Serial.print("Not in database");
+    //                 } else {
+    //                     Serial.print("Unknown error");
+    //                 }
+
+    //             } catch (nlohmann::json::parse_error& e) {
+    //                 Serial.printf("Error: %s",e.what());
+    //             }
+    //         }
+
+    //         curl_easy_cleanup(curl);
+            
+    //     }
+    // }
 
     void networkScanner(){
         uint32_t before = millis();
