@@ -32,8 +32,15 @@ namespace STATION_Utils {
     
     void    checkStandingUpdateTime();
     void    sendBeacon();
-    void    saveIndex(uint8_t type, uint8_t index);
-    void    loadIndex(uint8_t type);
+
+    enum class IndexType : uint8_t {
+        callsign,
+        freq,
+        brightness,
+    };
+
+    void    saveIndex(IndexType type, uint8_t index);
+    void    loadIndex(IndexType type);
 
 }
 

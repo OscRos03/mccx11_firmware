@@ -268,12 +268,12 @@ namespace STATION_Utils {
         if (currentBeacon->gpsEcoMode) gpsShouldSleep = true;
     }
 
-    void saveIndex(uint8_t type, uint8_t index) {
+    void saveIndex(IndexType type, uint8_t index) {
         String filePath;
         switch (type) {
-            case 0: filePath = "/callsignIndex.txt"; break;
-            case 1: filePath = "/freqIndex.txt"; break;
-            case 2: filePath = "/brightness.txt"; break;
+            case IndexType::callsign: filePath = "/callsignIndex.txt"; break;
+            case IndexType::freq: filePath = "/freqIndex.txt"; break;
+            case IndexType::brightness: filePath = "/brightness.txt"; break;
             default: return; // Invalid type, exit function
         }
     
@@ -284,9 +284,9 @@ namespace STATION_Utils {
         if (fileIndex.println(dataToSave)) {
             String logMessage;
             switch (type) {
-                case 0: logMessage = "New Callsign Index"; break;
-                case 1: logMessage = "New Frequency Index"; break;
-                case 2: logMessage = "New Brightness"; break;
+                case IndexType::callsign: logMessage = "New Callsign Index"; break;
+                case IndexType::freq: logMessage = "New Frequency Index"; break;
+                case IndexType::brightness: logMessage = "New Brightness"; break;
                 default: return; // Invalid type, exit function
             }
             logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "Main", "%s saved to SPIFFS", logMessage.c_str());
@@ -294,20 +294,20 @@ namespace STATION_Utils {
         fileIndex.close();
     }
 
-    void loadIndex(uint8_t type) {
+    void loadIndex(IndexType type) {
         String filePath;
         switch (type) {
-            case 0: filePath = "/callsignIndex.txt"; break;
-            case 1: filePath = "/freqIndex.txt"; break;
-            case 2: filePath = "/brightness.txt"; break;
+            case IndexType::callsign: filePath = "/callsignIndex.txt"; break;
+            case IndexType::freq: filePath = "/freqIndex.txt"; break;
+            case IndexType::brightness: filePath = "/brightness.txt"; break;
             default: return; // Invalid type, exit function
         }
 
         if (!SPIFFS.exists(filePath)) {
             switch (type) {
-                case 0: myBeaconsIndex = 0; break;
-                case 1: loraIndex = 0; break;
-                case 2:
+                case IndexType::callsign: myBeaconsIndex = 0; break;
+                case IndexType::freq: loraIndex = 0; break;
+                case IndexType::brightness:
                     #ifdef HAS_TFT
                         screenBrightness = 255;
                     #else
@@ -323,15 +323,20 @@ namespace STATION_Utils {
                 String firstLine = fileIndex.readStringUntil('\n');
                 int index = firstLine.toInt();
                 String logMessage;
-                if (type == 0) {
-                    myBeaconsIndex = index;
-                    logMessage = "Callsign Index:";
-                } else if (type == 1) {
-                    loraIndex = index;
-                    logMessage = "LoRa Freq Index:";
-                } else {
-                    screenBrightness = index;
-                    logMessage = "Brightness:";
+                switch (type) {
+                    case IndexType::callsign:
+                        myBeaconsIndex = index;
+                        logMessage = "Callsign Index:";
+                        break;
+                    case IndexType::freq:
+                        loraIndex = index;
+                        logMessage = "LoRa Freq Index:";
+                        break;
+                    case IndexType::brightness:
+                        screenBrightness = index;
+                        logMessage = "Brightness:";
+                        break;
+                    default: return; // Invalid type, exit function
                 }
                 logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "Main", "%s %s", logMessage.c_str(), firstLine);
             }
