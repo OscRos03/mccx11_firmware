@@ -37,6 +37,34 @@ struct savedNetwork {
 
 namespace WIFI_Utils {
 
+    void scanAndLog(){
+        String logged[] = {};
+        int channels[] = {1,6,7,11,13};  // test with different channels and order
+        int sizeOfArray = sizeof(channels)/sizeof(channels[0]);
+        byte networksInChannel;
+        std::vector<savedNetwork> allSavedNetworks; 
+
+        
+        for (int i = 0; i<sizeOfArray; i++) {
+            networksInChannel = WiFi.scanNetworks(false,false,false,200,channels[i]);
+
+            for (int j = 0; j < networksInChannel; j++) {
+                if (WiFi.BSSIDstr(j)) {}
+
+                savedNetwork network;
+                network.SSID = WiFi.SSID(j);
+                network.BSSID = WiFi.BSSIDstr(j);
+                network.RSSI = WiFi.RSSI(j);
+                allSavedNetworks.push_back(network);
+            }
+            WiFi.scanDelete();
+
+        }
+        for (int i = 0; i < allSavedNetworks.size(); i++) {
+            Serial.printf("%s,\n",allSavedNetworks[i].BSSID.c_str());
+        }
+    }
+
     void networkScanner(){
         uint32_t before = millis();
         std::vector<savedNetwork> allSavedNetworks; 
