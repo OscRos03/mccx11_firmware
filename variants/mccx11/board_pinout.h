@@ -29,6 +29,13 @@
     #define RADIO_DIO1_PIN      7
     #define RADIO_BUSY_PIN      8
 
+    //  Power system
+    #define HAS_MAX17055
+    #define MAX17055_ADDR       0x36
+    #define BATT_CAPACITY       750
+    #define BATT_I_TERM         20
+    #define BATT_V_EMPTY        3
+
     //  Display
     #undef  OLED_SDA
     #undef  OLED_SCL

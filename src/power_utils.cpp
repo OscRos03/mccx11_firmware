@@ -27,6 +27,7 @@
 #include "gps_utils.h"
 #include "display.h"
 #include "logger.h"
+#include "utils.h"
 
 
 #if !defined(TTGO_T_Beam_S3_SUPREME_V3) && !defined(HELTEC_WIRELESS_TRACKER)
@@ -143,6 +144,49 @@ namespace POWER_Utils {
             #ifdef HAS_AXP2101
                 return PMU.getBatteryPercent();
             #endif
+        }
+    #endif
+
+    #ifdef HAS_MAX17055
+        bool _setup_MAX17055() {
+            const uint8_t NR_ATTEMPTS = 3;
+            uint16_t output;
+            if (Utils::i2cReadRegister(MAX17055_ADDR, 0x0, output, NR_ATTEMPTS) > 0) return false;
+            if (output & 0b10) {
+                output = 0; // make sure the following while loop continues if the reading fails
+                do {
+                    Utils::i2cReadRegister(MAX17055_ADDR, 0x3D, output, NR_ATTEMPTS);
+                    delay(10);
+                } while (output & 0b1);
+
+                uint16_t hibCFG;
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0xBA, hibCFG, NR_ATTEMPTS) > 0) return false;                                         // HibCFG=ReadRegister(0xBA) ; //Store original HibCFG value
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x60, 0x90, NR_ATTEMPTS) > 0) return false;                                          // WriteRegister (0x60 , 0x90) ; // Exit Hibernate Mode step 1
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xBA, 0x0, NR_ATTEMPTS) > 0) return false;                                           // WriteRegister (0xBA , 0x0) ; // Exit Hibernate Mode step 2
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x60, 0x0, NR_ATTEMPTS) > 0) return false;                                           // WriteRegister (0x60 , 0x0) ; // Exit Hibernate Mode step 3
+
+                uint16_t dQAcc = BATT_CAPACITY / 32;
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x18, BATT_CAPACITY, NR_ATTEMPTS) > 0) return false;                                 // WriteRegister (0x18 , DesignCap) ; // Write DesignCap
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x18, dQAcc, NR_ATTEMPTS) > 0) return false;                                         // WriteRegister (0x45 , DesignCap/32) ; //Write dQAcc
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x1E, BATT_I_TERM, NR_ATTEMPTS) > 0) return false;                                   // WriteRegister (0x1E , IchgTerm) ; // Write IchgTerm
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x3A, BATT_V_EMPTY, NR_ATTEMPTS) > 0) return false;                                  // WriteRegister (0x3A , VEmpty) ; // Write VEmpty
+
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x46, (uint16_t) (dQAcc * 44138 / BATT_CAPACITY), NR_ATTEMPTS) > 0) return false;    // WriteRegister (0x46 , dQAcc*44138/DesignCap); //Write dPAcc
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xDB, 0x8000, NR_ATTEMPTS) > 0) return false;                                        // WriteRegister (0xDB , 0x8000) ; // Write ModelCFG
+                
+                output = 1; // make sure the following while loop continues if the reading fails
+                do {
+                    Utils::i2cReadRegister(MAX17055_ADDR, 0x3D, output);
+                    delay(10);
+                } while (output >> 15);                                                                                                         //While (ReadRegister(0xDB)&0x8000) Wait(10)；//10ms wait loop. Do not continue until ModelCFG.Refresh == 0.
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xBA, hibCFG) > 0) return false;                                                     // WriteRegister (0xBA , HibCFG) ; // Restore Original HibCFG value
+            }
+            
+            uint16_t status;
+            if (Utils::i2cReadRegister(MAX17055_ADDR, 0x00, status) > 0) return false;                                                          // Status = ReadRegister(0x00); //Read Status
+            if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x00, status & 0xFFFD) > 0) return false;                                       // WriteAndVerifyRegister (0x00, Status AND 0xFFFD) ; //Write and Verify Status with POR bit cleared
+            
+            return true;
         }
     #endif
 
@@ -373,6 +417,11 @@ namespace POWER_Utils {
             PMU.setChargeTargetVoltage(XPOWERS_AXP2101_CHG_VOL_4V2);
             PMU.setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_800MA);
             PMU.setSysPowerDownVoltage(2600);
+        #endif
+
+        #ifdef HAS_MAX17055
+            bool didFail = _setup_MAX17055();
+            while (didFail) delay(1000); // prevent further execution
         #endif
 
         #ifdef BATTERY_PIN

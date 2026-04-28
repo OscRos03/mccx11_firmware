@@ -40,6 +40,10 @@ namespace POWER_Utils {
         void    handleChargingLed();
     #endif
 
+    #ifdef HAS_MAX17055
+        bool _setup_MAX17055();
+    #endif
+
     bool isCharging();    
 
     void activateGPS();
