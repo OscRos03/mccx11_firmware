@@ -33,6 +33,38 @@ namespace Utils {
     void    checkFlashlight();
     void    i2cScannerForPeripherals();
 
+    /**
+     * @param device i2c adress
+     * @param reg register adress
+     * @param data bytes to transmit (in the order of the array)
+     * @param length length of data array
+     * @return operation status (return value from Wire.endTransmission)
+     */
+    uint8_t i2cWriteRegister(uint8_t device, uint8_t reg, const uint8_t data[], uint8_t length);
+
+    /**
+     * @param device i2c adress
+     * @param reg register adress
+     * @param length number of bytes to request
+     * @param output array to which received bytes will be written (in order they are received). Should of length specfied by parameter 'length'
+     * @param nrReceivedBytes output for number of received bytes
+     * @return operation status (return value from Wire.endTransmission)
+     */
+    uint8_t i2cReadRegister(uint8_t device, uint8_t reg, uint8_t length, uint8_t output[], uint8_t *nrReceivedBytes);
+
+    /**
+     * Write to an i2c register and verify that the data was written correctly
+     * 
+     * @param device i2c adress
+     * @param reg register adress
+     * @param data bytes to transmit (in the order of the array)
+     * @param responseBuffer array of at least the length specified by the length parameter
+     * @param length length of data array
+     * @param attempts number of times to try to write the data
+     * @return whether the data was written successfully 
+     */
+    bool    i2cWriteRegisterAndVerify(uint8_t device, uint8_t reg, const uint8_t data[], uint8_t responseBuffer[], uint8_t length, uint8_t attempts);
+
 }
 
 #endif

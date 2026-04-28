@@ -208,4 +208,47 @@ namespace Utils {
         #endif
     }
 
+    uint8_t i2cWriteRegister(uint8_t device, uint8_t reg, const uint8_t data[], uint8_t length) {
+        Wire.beginTransmission(device);
+        Wire.write(reg);
+        for (uint8_t i = 0; i < length; i++) {
+            Wire.write(data[i]);
+        }
+        return Wire.endTransmission();
+    }
+
+    uint8_t i2cReadRegister(uint8_t device, uint8_t reg, uint8_t length, uint8_t output[], uint8_t *nrReceivedBytes) {
+        Wire.beginTransmission(device);
+        Wire.write(reg);
+        uint8_t statusCode = Wire.endTransmission(false); // dont relase the bus
+        if (statusCode > 0) return statusCode;
+
+        uint8_t _nrReceivedBytes = Wire.requestFrom(device, length);
+        for (uint8_t i = 0; i < _nrReceivedBytes; i++){
+            output[i] = Wire.read();
+        }
+        if (nrReceivedBytes) *nrReceivedBytes = _nrReceivedBytes;
+        return statusCode;
+    }
+
+    bool i2cWriteRegisterAndVerify(uint8_t device, uint8_t reg, const uint8_t data[], uint8_t responseBuffer[], uint8_t length, uint8_t attempts) {
+        for (uint8_t _ = 0; _ < attempts; _++) {
+            if (i2cWriteRegister(device, reg, data, length) > 0) continue;
+            delay(1);
+            uint8_t nrReceivedBytes;
+            if (i2cReadRegister(device, reg, length, responseBuffer, &nrReceivedBytes) > 0) continue;
+            if (nrReceivedBytes < length) {
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "I2C", "i2cWriteRegisterAndVerify received less bytes than requested");
+                continue;
+            }
+            bool write_succeeded = true;
+            for (uint8_t i = 0; i < length; i++) {
+                if (responseBuffer[i] == data[i]) continue; 
+                write_succeeded = false;
+                break;
+            }
+            if (write_succeeded) return true;
+        }
+        return false;
+    }
 }
