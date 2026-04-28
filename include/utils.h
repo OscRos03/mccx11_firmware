@@ -36,34 +36,31 @@ namespace Utils {
     /**
      * @param device i2c adress
      * @param reg register adress
-     * @param data bytes to transmit (in the order of the array)
-     * @param length length of data array
-     * @return operation status (return value from Wire.endTransmission)
+     * @param data data to transmit
+     * @param attempts number of attempts to transmit data
+     * @return operation status: return value from Wire.endTransmission
      */
-    uint8_t i2cWriteRegister(uint8_t device, uint8_t reg, const uint8_t data[], uint8_t length);
+    uint8_t i2cWriteRegister(uint8_t device, uint8_t reg, const uint16_t data, uint8_t attempts = 1);
 
     /**
      * @param device i2c adress
      * @param reg register adress
-     * @param length number of bytes to request
-     * @param output array to which received bytes will be written (in order they are received). Should of length specfied by parameter 'length'
-     * @param nrReceivedBytes output for number of received bytes
-     * @return operation status (return value from Wire.endTransmission)
+     * @param output the read data
+     * @param attempts number of attempts to transmit data
+     * @return operation status: return value from Wire.endTransmission or 6 if the number of received bytes was not as reqeusted
      */
-    uint8_t i2cReadRegister(uint8_t device, uint8_t reg, uint8_t length, uint8_t output[], uint8_t *nrReceivedBytes);
+    uint8_t i2cReadRegister(uint8_t device, uint8_t reg, uint16_t &output, uint8_t attempts = 1);
 
     /**
      * Write to an i2c register and verify that the data was written correctly
      * 
      * @param device i2c adress
      * @param reg register adress
-     * @param data bytes to transmit (in the order of the array)
-     * @param responseBuffer array of at least the length specified by the length parameter
-     * @param length length of data array
-     * @param attempts number of times to try to write the data
-     * @return whether the data was written successfully 
+     * @param data data to transmit
+     * @param attempts number of attempts to transmit data
+     * @return operation status: return value from Wire.endTransmission if it fails, 6 if the number of received bytes was not as reqeusted and 7 if the read value does not match the written one
      */
-    bool    i2cWriteRegisterAndVerify(uint8_t device, uint8_t reg, const uint8_t data[], uint8_t responseBuffer[], uint8_t length, uint8_t attempts);
+    uint8_t i2cWriteRegisterAndVerify(uint8_t device, uint8_t reg, const uint16_t data, uint8_t attempts = 1);
 
 }
 
