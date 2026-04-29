@@ -150,7 +150,7 @@ namespace POWER_Utils {
             #ifdef HAS_MAX17055
                 uint16_t soc;
                 if (Utils::i2cReadRegister(MAX17055_ADDR, 0x06, soc, 3) > 0) {
-                    logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "BATTERY", "Battery SOC could not be read");
+                    logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "MAX17055", "Battery SOC could not be read");
                     return -1; // return -1 if battery percentage could not be retreived
                 }
                 return (soc >> 8) + (soc & 0xFF) / 256.0f;  // MSB represents integer protion of SOC, LSB represents fractional part
@@ -204,31 +204,38 @@ namespace POWER_Utils {
         void restoreLearnedParameters() {
             const uint8_t NR_ATTEMPTS = 3;
             Preferences prefs;
+            bool succeeded = false;
+
             prefs.begin("fuel-gauge");
+            bool capacityParametersAreSaved = prefs.isKey("RCOMP0") && prefs.isKey("TempCo") && prefs.isKey("FullCapNom") && prefs.isKey("FullCapRep") && prefs.isKey("Cycles");
             do { // do-block to allow premature exit using the break keyword
-                bool capacityParametersAreSaved = prefs.isKey("RCOMP0") && prefs.isKey("TempCo") && prefs.isKey("FullCapNom") && prefs.isKey("FullCapRep") && prefs.isKey("Cycles");
                 if (!capacityParametersAreSaved) break;
 
-                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x38, prefs.getUShort("RCOMP0"), NR_ATTEMPTS);                          // WriteAndVerifyRegister(0x38, Saved_RCOMP0) ; //WriteAndVerify RCOMP0
-                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x39, prefs.getUShort("TempCo"), NR_ATTEMPTS);                          // WriteAndVerifyRegister(0x39, Saved_TempCo) ; //WriteAndVerify TempCo
-                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x23, prefs.getUShort("FullCapNom"), NR_ATTEMPTS) > 0)  break;      // WriteAndVerifyRegister(0x23, Saved_FullCapNom) ; //WriteAndVerify FullCapNom
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x38, prefs.getUShort("RCOMP0"), NR_ATTEMPTS) > 0)      break;  // WriteAndVerifyRegister(0x38, Saved_RCOMP0) ; //WriteAndVerify RCOMP0
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x39, prefs.getUShort("TempCo"), NR_ATTEMPTS) > 0)      break;  // WriteAndVerifyRegister(0x39, Saved_TempCo) ; //WriteAndVerify TempCo
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x23, prefs.getUShort("FullCapNom"), NR_ATTEMPTS) > 0)  break;  // WriteAndVerifyRegister(0x23, Saved_FullCapNom) ; //WriteAndVerify FullCapNom
                 delay(350);
 
                 uint16_t fullCapNom;
                 uint16_t mixSOC;
-                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x23, fullCapNom, NR_ATTEMPTS) > 0)                               break;      // FullCapNom= ReadRegister(0x23) ; //Read FullCapNom
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x23, fullCapNom, NR_ATTEMPTS) > 0)                               break;  // FullCapNom= ReadRegister(0x23) ; //Read FullCapNom
                 if (Utils::i2cReadRegister(MAX17055_ADDR, 0x0D, mixSOC, NR_ATTEMPTS) > 0)                                   break;
-                uint16_t mixCap = mixSOC * fullCapNom / 25600;                                                                          // MixCap=(ReadRegister(0x0D)*FullCapNom)/25600 ;
                 
-                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x0F, mixCap, NR_ATTEMPTS);                                             // WriteAndVerifyRegister(0x0F, MixCap) ; //WriteAndVerify MixCap
-                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x10, prefs.getUShort("FullCapRep"), NR_ATTEMPTS);                      // WriteAndVerifyRegister(0x10, Saved_FullCapRep) ; //WriteAndVerify FullCapRep
-                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x46, 0x0C80, NR_ATTEMPTS);                                             // WriteAndVerifyRegister (0x46, 0x0C80) ; //Write and Verify dPacc
-                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x45, (uint16_t) (prefs.getUShort("FullCapNom") / 16), NR_ATTEMPTS);    // WriteAndVerifyRegister (0x45, (Saved_FullCapNom/ 16)) ; //Write and Verify dQacc
+                uint16_t mixCap = mixSOC * fullCapNom / 25600;                                                                      // MixCap=(ReadRegister(0x0D)*FullCapNom)/25600 ;
+                uint16_t dQAcc = prefs.getUShort("FullCapNom") / 16;
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x0F, mixCap, NR_ATTEMPTS) > 0)                         break;  // WriteAndVerifyRegister(0x0F, MixCap) ; //WriteAndVerify MixCap
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x10, prefs.getUShort("FullCapRep"), NR_ATTEMPTS) > 0)  break;  // WriteAndVerifyRegister(0x10, Saved_FullCapRep) ; //WriteAndVerify FullCapRep
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x46, 0x0C80, NR_ATTEMPTS) > 0)                         break;  // WriteAndVerifyRegister (0x46, 0x0C80) ; //Write and Verify dPacc
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x45, dQAcc, NR_ATTEMPTS) > 0)                          break;  // WriteAndVerifyRegister (0x45, (Saved_FullCapNom/ 16)) ; //Write and Verify dQacc
                 delay(350);
-                
-                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x17, prefs.getUShort("Cycles"), NR_ATTEMPTS);                          // WriteAndVerifyRegister(0x17, Saved_Cycles) ; //WriteAndVerify Cycles
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x17, prefs.getUShort("Cycles"), NR_ATTEMPTS) > 0)      break;  // WriteAndVerifyRegister(0x17, Saved_Cycles) ; //WriteAndVerify Cycles
+            
+                succeeded = true;
             } while (false);
+
             prefs.end();
+
+            if (!succeeded && capacityParametersAreSaved) logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "MAX17055", "Failed to load saved capacity parameters");
         }
 
         void saveLearnedParamsIfNeeded() {
@@ -486,6 +493,10 @@ namespace POWER_Utils {
 
         #ifdef HAS_MAX17055
             bool didFail = setupMAX17055();
+            
+            if (didFail)    logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "MAX17055", "init failed!");
+            else            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "MAX17055", "init done!");
+            
             while (didFail) delay(1000); // prevent further execution
             restoreLearnedParameters();
         #endif
