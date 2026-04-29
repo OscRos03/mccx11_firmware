@@ -28,6 +28,7 @@
 #include "display.h"
 #include "logger.h"
 #include "utils.h"
+#include <Preferences.h>
 
 
 #if !defined(TTGO_T_Beam_S3_SUPREME_V3) && !defined(HELTEC_WIRELESS_TRACKER)
@@ -148,45 +149,99 @@ namespace POWER_Utils {
     #endif
 
     #ifdef HAS_MAX17055
-        bool _setup_MAX17055() {
+        bool setupMAX17055() {
             const uint8_t NR_ATTEMPTS = 3;
             uint16_t output;
-            if (Utils::i2cReadRegister(MAX17055_ADDR, 0x0, output, NR_ATTEMPTS) > 0) return false;
+            if (Utils::i2cReadRegister(MAX17055_ADDR, 0x0, output, NR_ATTEMPTS) > 0)                return false;
             if (output & 0b10) {
                 output = 0; // make sure the following while loop continues if the reading fails
                 do {
                     Utils::i2cReadRegister(MAX17055_ADDR, 0x3D, output, NR_ATTEMPTS);
                     delay(10);
-                } while (output & 0b1);
+                } while (output & 0b1);                                                                             // While(ReadRegister(0x3D)&1) Wait(10); //do not continue until FSTAT.DNR == 0
 
                 uint16_t hibCFG;
-                if (Utils::i2cReadRegister(MAX17055_ADDR, 0xBA, hibCFG, NR_ATTEMPTS) > 0) return false;                                         // HibCFG=ReadRegister(0xBA) ; //Store original HibCFG value
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x60, 0x90, NR_ATTEMPTS) > 0) return false;                                          // WriteRegister (0x60 , 0x90) ; // Exit Hibernate Mode step 1
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xBA, 0x0, NR_ATTEMPTS) > 0) return false;                                           // WriteRegister (0xBA , 0x0) ; // Exit Hibernate Mode step 2
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x60, 0x0, NR_ATTEMPTS) > 0) return false;                                           // WriteRegister (0x60 , 0x0) ; // Exit Hibernate Mode step 3
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0xBA, hibCFG, NR_ATTEMPTS) > 0)           return false;   // HibCFG=ReadRegister(0xBA) ; //Store original HibCFG value
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x60, 0x90, NR_ATTEMPTS) > 0)            return false;   // WriteRegister (0x60 , 0x90) ; // Exit Hibernate Mode step 1
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xBA, 0x0, NR_ATTEMPTS) > 0)             return false;   // WriteRegister (0xBA , 0x0) ; // Exit Hibernate Mode step 2
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x60, 0x0, NR_ATTEMPTS) > 0)             return false;   // WriteRegister (0x60 , 0x0) ; // Exit Hibernate Mode step 3
 
                 uint16_t dQAcc = BATT_CAPACITY / 32;
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x18, BATT_CAPACITY, NR_ATTEMPTS) > 0) return false;                                 // WriteRegister (0x18 , DesignCap) ; // Write DesignCap
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x18, dQAcc, NR_ATTEMPTS) > 0) return false;                                         // WriteRegister (0x45 , DesignCap/32) ; //Write dQAcc
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x1E, BATT_I_TERM, NR_ATTEMPTS) > 0) return false;                                   // WriteRegister (0x1E , IchgTerm) ; // Write IchgTerm
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x3A, BATT_V_EMPTY, NR_ATTEMPTS) > 0) return false;                                  // WriteRegister (0x3A , VEmpty) ; // Write VEmpty
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x18, BATT_CAPACITY, NR_ATTEMPTS) > 0)   return false;   // WriteRegister (0x18 , DesignCap) ; // Write DesignCap
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x18, dQAcc, NR_ATTEMPTS) > 0)           return false;   // WriteRegister (0x45 , DesignCap/32) ; //Write dQAcc
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x1E, BATT_I_TERM, NR_ATTEMPTS) > 0)     return false;   // WriteRegister (0x1E , IchgTerm) ; // Write IchgTerm
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x3A, BATT_V_EMPTY, NR_ATTEMPTS) > 0)    return false;   // WriteRegister (0x3A , VEmpty) ; // Write VEmpty
 
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x46, (uint16_t) (dQAcc * 44138 / BATT_CAPACITY), NR_ATTEMPTS) > 0) return false;    // WriteRegister (0x46 , dQAcc*44138/DesignCap); //Write dPAcc
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xDB, 0x8000, NR_ATTEMPTS) > 0) return false;                                        // WriteRegister (0xDB , 0x8000) ; // Write ModelCFG
+                uint16_t dPAcc = dQAcc * 44138 / BATT_CAPACITY;
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0x46, dPAcc, NR_ATTEMPTS) > 0)           return false;   // WriteRegister (0x46 , dQAcc*44138/DesignCap); //Write dPAcc
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xDB, 0x8000, NR_ATTEMPTS) > 0)          return false;   // WriteRegister (0xDB , 0x8000) ; // Write ModelCFG
                 
                 output = 1; // make sure the following while loop continues if the reading fails
                 do {
                     Utils::i2cReadRegister(MAX17055_ADDR, 0x3D, output);
                     delay(10);
-                } while (output >> 15);                                                                                                         //While (ReadRegister(0xDB)&0x8000) Wait(10)；//10ms wait loop. Do not continue until ModelCFG.Refresh == 0.
-                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xBA, hibCFG) > 0) return false;                                                     // WriteRegister (0xBA , HibCFG) ; // Restore Original HibCFG value
+                } while (output >> 15);                                                                             // While (ReadRegister(0xDB)&0x8000) Wait(10)；//10ms wait loop. Do not continue until ModelCFG.Refresh == 0.
+                if (Utils::i2cWriteRegister(MAX17055_ADDR, 0xBA, hibCFG) > 0)                       return false;   // WriteRegister (0xBA , HibCFG) ; // Restore Original HibCFG value
             }
             
             uint16_t status;
-            if (Utils::i2cReadRegister(MAX17055_ADDR, 0x00, status) > 0) return false;                                                          // Status = ReadRegister(0x00); //Read Status
-            if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x00, status & 0xFFFD) > 0) return false;                                       // WriteAndVerifyRegister (0x00, Status AND 0xFFFD) ; //Write and Verify Status with POR bit cleared
-            
+            if (Utils::i2cReadRegister(MAX17055_ADDR, 0x00, status) > 0)                            return false;   // Status = ReadRegister(0x00); //Read Status
+            if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x00, status & 0xFFFD) > 0)         return false;   // WriteAndVerifyRegister (0x00, Status AND 0xFFFD) ; //Write and Verify Status with POR bit cleared
+
             return true;
+        }
+
+        void restoreLearnedParameters() {
+            const uint8_t NR_ATTEMPTS = 3;
+            Preferences prefs;
+            prefs.begin("fuel-gauge");
+            do { // do-block to allow premature exit using the break keyword
+                bool capacityParametersAreSaved = prefs.isKey("RCOMP0") && prefs.isKey("TempCo") && prefs.isKey("FullCapNom") && prefs.isKey("FullCapRep") && prefs.isKey("Cycles");
+                if (!capacityParametersAreSaved) break;
+
+                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x38, prefs.getUShort("RCOMP0"), NR_ATTEMPTS);                          // WriteAndVerifyRegister(0x38, Saved_RCOMP0) ; //WriteAndVerify RCOMP0
+                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x39, prefs.getUShort("TempCo"), NR_ATTEMPTS);                          // WriteAndVerifyRegister(0x39, Saved_TempCo) ; //WriteAndVerify TempCo
+                if (Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x23, prefs.getUShort("FullCapNom"), NR_ATTEMPTS) > 0)  break;      // WriteAndVerifyRegister(0x23, Saved_FullCapNom) ; //WriteAndVerify FullCapNom
+                delay(350);
+
+                uint16_t fullCapNom;
+                uint16_t mixSOC;
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x23, fullCapNom, NR_ATTEMPTS) > 0)                               break;      // FullCapNom= ReadRegister(0x23) ; //Read FullCapNom
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x0D, mixSOC, NR_ATTEMPTS) > 0)                                   break;
+                uint16_t mixCap = mixSOC * fullCapNom / 25600;                                                                          // MixCap=(ReadRegister(0x0D)*FullCapNom)/25600 ;
+                
+                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x0F, mixCap, NR_ATTEMPTS);                                             // WriteAndVerifyRegister(0x0F, MixCap) ; //WriteAndVerify MixCap
+                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x10, prefs.getUShort("FullCapRep"), NR_ATTEMPTS);                      // WriteAndVerifyRegister(0x10, Saved_FullCapRep) ; //WriteAndVerify FullCapRep
+                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x46, 0x0C80, NR_ATTEMPTS);                                             // WriteAndVerifyRegister (0x46, 0x0C80) ; //Write and Verify dPacc
+                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x45, (uint16_t) (prefs.getUShort("FullCapNom") / 16), NR_ATTEMPTS);    // WriteAndVerifyRegister (0x45, (Saved_FullCapNom/ 16)) ; //Write and Verify dQacc
+                delay(350);
+                
+                Utils::i2cWriteRegisterAndVerify(MAX17055_ADDR, 0x17, prefs.getUShort("Cycles"), NR_ATTEMPTS);                          // WriteAndVerifyRegister(0x17, Saved_Cycles) ; //WriteAndVerify Cycles
+            } while (false);
+            prefs.end();
+        }
+
+        void saveLearnedParamsIfNeeded() {
+            const uint8_t NR_ATTEMPTS = 3;
+            Preferences prefs;
+
+            prefs.begin("fuel-gauge");
+            if (!prefs.isKey("Cycles")) return;
+
+            uint16_t lastCycles = prefs.getUShort("Cycles");
+            uint16_t currCycles;
+            if (Utils::i2cReadRegister(MAX17055_ADDR, 0x17, currCycles, NR_ATTEMPTS) > 0) return;
+
+            bool doSave = (lastCycles ^ currCycles) & (0b1 << 6); // only save when cycles changes by 64% (i.e 6th bit)
+            if (doSave) {
+                uint16_t output;
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x38, output, NR_ATTEMPTS) == 0) prefs.putUShort("RCOMP0", output);       // Saved_RCOMP0 = ReadRegister(0x38) ; //Read RCOMP0
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x39, output, NR_ATTEMPTS) == 0) prefs.putUShort("TempCo", output);       // Saved_TempCo = ReadRegister(0x39) ; //Read TempCo
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x10, output, NR_ATTEMPTS) == 0) prefs.putUShort("FullCapRep", output);   // Saved_FullCapRep = ReadRegister(0x10) ; //Read FullCapRep
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x23, output, NR_ATTEMPTS) == 0) prefs.putUShort("FullCapNom", output);   // Saved_FullCapNom = ReadRegister(0x23) ; //Read FullCapNom
+                prefs.putUShort("Cycles", currCycles);
+            }
+            prefs.end();
         }
     #endif
 
@@ -420,8 +475,9 @@ namespace POWER_Utils {
         #endif
 
         #ifdef HAS_MAX17055
-            bool didFail = _setup_MAX17055();
+            bool didFail = setupMAX17055();
             while (didFail) delay(1000); // prevent further execution
+            restoreLearnedParameters();
         #endif
 
         #ifdef BATTERY_PIN

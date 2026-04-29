@@ -197,6 +197,10 @@ void loop() {
 
     BATTERY_Utils::monitor();
     Utils::checkDisplayEcoMode();
+    
+    #ifdef HAS_MAX17055
+        POWER_Utils::saveLearnedParamsIfNeeded();
+    #endif
 
     #ifdef BUTTON_PIN
         BUTTON_Utils::loop();

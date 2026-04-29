@@ -41,7 +41,9 @@ namespace POWER_Utils {
     #endif
 
     #ifdef HAS_MAX17055
-        bool _setup_MAX17055();
+        bool setupMAX17055();
+        void restoreLearnedParameters();
+        void saveLearnedParamsIfNeeded();
     #endif
 
     bool isCharging();    
