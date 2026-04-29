@@ -102,6 +102,8 @@ namespace BATTERY_Utils {
                 batteryVoltage                  = String(readBatteryVoltage(), 2);
                 batteryChargeDischargeCurrent   = String(POWER_Utils::getBatteryChargeDischargeCurrent(), 0);
             }
+        #elif defined(HAS_MAX17055)
+            batteryChargeDischargeCurrent   = String(POWER_Utils::getBatteryChargeDischargeCurrent(), 0);
         #else
             batteryVoltage = String(readBatteryVoltage(), 2);
             if (batteryVoltage.toFloat() > 1.5) batteryConnected = true;
@@ -109,10 +111,12 @@ namespace BATTERY_Utils {
     }   
 
     void monitor() {
-        #if defined(HAS_AXP192) || defined(HAS_AXP2101)
+        #if defined(HAS_AXP192) || defined(HAS_AXP2101) || defined(HAS_MAX17055)
             if (batteryMeasurmentTime == 0 || (millis() - batteryMeasurmentTime) > 1 * 1000){
                 obtainBatteryInfo();
-                POWER_Utils::handleChargingLed();
+                #if defined(HAS_AXP192) || defined(HAS_AXP2101)
+                    POWER_Utils::handleChargingLed();
+                #endif
                 batteryMeasurmentTime = millis();
             }
         #elif defined(BATTERY_PIN)

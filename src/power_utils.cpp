@@ -130,7 +130,9 @@ namespace POWER_Utils {
                 disableChgLed();
             }
         }
+    #endif
 
+    #if defined(HAS_AXP192) || defined(HAS_AXP2101) || defined(HAS_MAX17055)
         String getBatteryInfoCurrent() {
             return batteryChargeDischargeCurrent;
         }
@@ -144,6 +146,14 @@ namespace POWER_Utils {
             #endif
             #ifdef HAS_AXP2101
                 return PMU.getBatteryPercent();
+            #endif
+            #ifdef HAS_MAX17055
+                uint16_t soc;
+                if (Utils::i2cReadRegister(MAX17055_ADDR, 0x06, soc, 3) > 0) {
+                    logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "BATTERY", "Battery SOC could not be read");
+                    return -1; // return -1 if battery percentage could not be retreived
+                }
+                return (soc >> 8) + (soc & 0xFF) / 256.0f;  // MSB represents integer protion of SOC, LSB represents fractional part
             #endif
         }
     #endif
