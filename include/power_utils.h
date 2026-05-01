@@ -34,9 +34,12 @@ namespace POWER_Utils {
         void    adc_ctrl_OFF();
     #endif
 
-    #if defined(HAS_AXP192) || defined(HAS_AXP2101)
+    #if defined(HAS_AXP192) || defined(HAS_AXP2101) || defined(HAS_MAX17055)
         String  getBatteryInfoCurrent();
         float   getBatteryChargeDischargeCurrent();
+    #endif
+
+    #if defined(HAS_AXP192) || defined(HAS_AXP2101)
         void    handleChargingLed();
     #endif
 
