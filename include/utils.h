@@ -32,7 +32,8 @@ namespace Utils {
     String  getSmartBeaconState();
     void    checkFlashlight();
     void    i2cScannerForPeripherals();
-
+    void    save_nvs(int, TrackerMethod);
+    int     load_nvs();
 }
 
 #endif

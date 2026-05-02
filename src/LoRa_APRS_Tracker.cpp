@@ -64,6 +64,9 @@ ____________________________________________________________________*/
 #include "wx_utils.h"
 #include "display.h"
 #include "utils.h"
+#include "nvs_flash.h"
+#include "nvs.h"
+
 #ifdef HAS_TOUCHSCREEN
 #include "touch_utils.h"
 #endif
@@ -125,7 +128,6 @@ logging::Logger                     logger;
 extern bool gpsIsActive;
 
 void setup() {
-    Config.trackerMethod = TrackerMethod::wifi;
     Serial.begin(115200);
 
     #ifndef DEBUG
@@ -178,9 +180,17 @@ void setup() {
     logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "Main", "Smart Beacon is: %s", Utils::getSmartBeaconState());
     logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "Setup Done!");
     menuDisplay = 0;
+
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == 0x1101) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 }
 
 void loop() {
+    int runCountForWifi = Utils::load_nvs();    // also loads last used trackermethod from flash
     currentBeacon = &Config.beacons[myBeaconsIndex];
     if (statusUpdate) {
         if (APRSPacketLib::checkNocall(currentBeacon->callsign)) {
@@ -232,7 +242,9 @@ void loop() {
     STATION_Utils::checkListenedStationsByTimeAndDelete();
 
     lastTx = millis() - lastTxTime;
-    if (gpsIsActive && Config.trackerMethod == TrackerMethod::gps) {
+    if ((gpsIsActive && Config.trackerMethod == TrackerMethod::gps) || runCountForWifi > 2) {
+        Config.trackerMethod = TrackerMethod::gps;  // needed incase trackermethod is still wifi but and we got here through runCountForWifi
+        runCountForWifi = 0;
         GPS_Utils::getData();
         bool gps_time_update = gps.time.isUpdated();
         bool gps_loc_update  = gps.location.isUpdated();
@@ -270,11 +282,13 @@ void loop() {
     // }
     else if (Config.trackerMethod == TrackerMethod::wifi) {
         WIFI_Utils::networkScanner();
+        runCountForWifi++;
     }
     else {
         // currently probably cant be else
         // sleep for a while then attempt again
     }
+    Utils::save_nvs(runCountForWifi,Config.trackerMethod);
     logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"SLEEP","Going to sleep...");
     long DEEP_SLEEP_TIME_SEC = 60; // 60 seconds
     esp_sleep_enable_timer_wakeup(1000000ULL * DEEP_SLEEP_TIME_SEC);

@@ -119,7 +119,7 @@ namespace WIFI_Utils {
             case false: {
                 logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found, discovered networks:");
                 if (allSavedNetworks.size() == 0) {
-                    Serial.println("no nearby networks");
+                    Serial.println("no nearby networks, switching to gps");
                     Config.trackerMethod = TrackerMethod::gps;
                 }
                 for (int i = 0; i < allSavedNetworks.size(); i++) {
