@@ -118,6 +118,10 @@ namespace WIFI_Utils {
             }
             case false: {
                 logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found, discovered networks:");
+                if (allSavedNetworks.size() == 0) {
+                    Serial.println("no nearby networks");
+                    Config.trackerMethod = TrackerMethod::gps;
+                }
                 for (int i = 0; i < allSavedNetworks.size(); i++) {
                     Serial.printf("Network #%d SSID: %s BSSID: %s\n",i,allSavedNetworks[i].SSID.c_str(),allSavedNetworks[i].BSSID.c_str());
                 }
