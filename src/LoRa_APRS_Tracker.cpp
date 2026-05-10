@@ -128,6 +128,7 @@ logging::Logger                     logger;
 extern bool gpsIsActive;
 
 void setup() {
+    Config.trackerMethod = TrackerMethod::wifi;
     Serial.begin(115200);
 
     #ifndef DEBUG
@@ -242,8 +243,8 @@ void loop() {
     STATION_Utils::checkListenedStationsByTimeAndDelete();
 
     lastTx = millis() - lastTxTime;
-    if ((gpsIsActive && Config.trackerMethod == TrackerMethod::gps) || runCountForWifi > 2) {
-        Config.trackerMethod = TrackerMethod::gps;  // needed incase trackermethod is still wifi but and we got here through runCountForWifi
+    if ((gpsIsActive && Config.trackerMethod == TrackerMethod::gps) || runCountForWifi > 2) {   // > 2 used to check if gps is viable after a few wifi loops
+        if (runCountForWifi > 2) Config.trackerMethod = TrackerMethod::gps;  // needed incase trackermethod is still wifi but and we got here through runCountForWifi
         runCountForWifi = 0;
         GPS_Utils::getData();
         bool gps_time_update = gps.time.isUpdated();
@@ -263,12 +264,13 @@ void loop() {
         if (sendUpdate && gps_loc_update) STATION_Utils::sendBeacon();
         if (gps_time_update) SMARTBEACON_Utils::checkInterval(currentSpeed);
 
-        if ((millis() - refreshDisplayTime >= 1000 || gps_time_update) && Config.trackerMethod == TrackerMethod::gps) {
+        if ((millis() - refreshDisplayTime >= 1000 || gps_time_update)) {
             GPS_Utils::checkStartUpFrames();
             MENU_Utils::showOnScreen();
             refreshDisplayTime = millis();
         }
         SLEEP_Utils::checkIfGPSShouldSleep();
+
     } 
     // else {
     //     if (millis() - lastGPSTime > txInterval) {
@@ -285,6 +287,7 @@ void loop() {
         runCountForWifi++;
     }
     else {
+        Serial.println("else");
         // currently probably cant be else
         // sleep for a while then attempt again
     }

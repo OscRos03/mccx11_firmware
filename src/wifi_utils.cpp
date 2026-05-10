@@ -19,6 +19,7 @@
 #include <WiFi.h>
 #include "configuration.h"
 #include "web_utils.h"
+#include "lora_utils.h"
 #include "display.h"
 
 extern      Configuration       Config;
@@ -67,7 +68,8 @@ namespace WIFI_Utils {
 
     void networkScanner(){
         uint32_t before = millis();
-        std::vector<savedNetwork> allSavedNetworks; 
+        int totalNetworkCount = 0;
+        // std::vector<savedNetwork> allSavedNetworks;  // used for matching against DB
         int channels[] = {1,6,7,11,13};  // test with different channels and order
         int sizeOfArray = sizeof(channels)/sizeof(channels[0]);
         bool found = false;
@@ -76,16 +78,17 @@ namespace WIFI_Utils {
         for (int i = 0; i<sizeOfArray; i++) {
             networksInChannel = WiFi.scanNetworks(false,false,false,200,channels[i]);
             Serial.printf("%d networks in channel %d\n",networksInChannel, channels[i]);
-            
+            totalNetworkCount += networksInChannel;
+
             for (int j = 0; j < networksInChannel; j++) {
                 // Serial.printf("BSSID: %s\n",WiFi.BSSIDstr(j).c_str());
                 // Serial.printf("SSID: %s\n",WiFi.SSID(j).c_str());
                 
-                savedNetwork network;
-                network.SSID = WiFi.SSID(j);
-                network.BSSID = WiFi.BSSIDstr(j);
-                network.RSSI = WiFi.RSSI(j);
-                allSavedNetworks.push_back(network);
+                // savedNetwork network;
+                // network.SSID = WiFi.SSID(j);
+                // network.BSSID = WiFi.BSSIDstr(j);
+                // network.RSSI = WiFi.RSSI(j);
+                // allSavedNetworks.push_back(network);  // used for matching against DB
                 
                 if (WiFi.SSID(j) == home) { // naive approach for a "home network"
                     found = true;
@@ -118,16 +121,17 @@ namespace WIFI_Utils {
             }
             case false: {
                 logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found, discovered networks:");
-                if (allSavedNetworks.size() == 0) {
+                if (totalNetworkCount == 0) {
                     Serial.println("no nearby networks, switching to gps");
                     Config.trackerMethod = TrackerMethod::gps;
                 }
-                for (int i = 0; i < allSavedNetworks.size(); i++) {
-                    Serial.printf("Network #%d SSID: %s BSSID: %s\n",i,allSavedNetworks[i].SSID.c_str(),allSavedNetworks[i].BSSID.c_str());
-                }
+                // for (int i = 0; i < allSavedNetworks.size(); i++) {
+                //     Serial.printf("Network #%d SSID: %s BSSID: %s\n",i,allSavedNetworks[i].SSID.c_str(),allSavedNetworks[i].BSSID.c_str());
+                // }
                 break;
             }
         }
+        LoRa_Utils::sendNewPacket("WiFi packet");
         logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","time to find networks: %d in ms",after-before);
         //delay(5000);
     }

@@ -39,8 +39,8 @@ extern bool                     displayState;
 extern int                      menuDisplay;
 extern String                   versionDate;
 extern bool                     flashlight;
+extern TrackerMethod            trackerMethod;
 
-TrackerMethod                   trackerMethod;
 Preferences                     preferences;
 
 extern bool                     statusUpdate;
@@ -114,14 +114,14 @@ namespace Utils {
     }
 
     void save_nvs(int runCount, TrackerMethod method) {
-        preferences.begin("storage,false"); // false = read and write
+        preferences.begin("storage",false); // false = read and write
         preferences.putInt("runCount",runCount);
         preferences.putInt("tMethod",static_cast<int>(method)); // have to cast to int since its an enum
         preferences.end();
     }
 
     int load_nvs() {
-        preferences.begin("storage",true); // true = read only
+        preferences.begin("storage",false); 
         Config.trackerMethod = static_cast<TrackerMethod>(preferences.getInt("tMethod",1)); // 1 is gps and becomes default if it doesnt work
         return preferences.getInt("runCount",0);
     }
