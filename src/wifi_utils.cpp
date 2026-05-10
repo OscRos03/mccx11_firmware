@@ -131,7 +131,7 @@ namespace WIFI_Utils {
                 break;
             }
         }
-        LoRa_Utils::sendNewPacket("WiFi packet");
+        LoRa_Utils::sendNewPacket("WiFi packet");   // PROBABLY VERY ILLEGAL TO SEND LIKE THIS RIGHT NOW
         logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","time to find networks: %d in ms",after-before);
         //delay(5000);
     }
