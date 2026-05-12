@@ -25,7 +25,7 @@ namespace GPS_Utils {
 
     void    setup();
     void    calculateDistanceCourse(const String& callsign, double checkpointLatitude, double checkPointLongitude);
-    void    getData();
+    bool    getData();
     void    setDateFromData();
     void    calculateDistanceTraveled();
     void    calculateHeadingDelta(int speed);

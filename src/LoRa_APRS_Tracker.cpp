@@ -68,9 +68,6 @@ ____________________________________________________________________*/
 #include "touch_utils.h"
 #endif
 
-#define WIFI_LOGGER
-#ifdef WIFI_LOGGER
-#endif
 
 
 String      versionDate             = "2026-01-20";
@@ -263,31 +260,35 @@ void loop() {
 
     lastTx = millis() - lastTxTime;
     if (gpsIsActive && Config.trackerMethod == TrackerMethod::gps && lastTx >= txInterval) {
-        GPS_Utils::getData();
-        bool gps_time_update = gps.time.isUpdated();
-        bool gps_loc_update  = gps.location.isUpdated();
-        GPS_Utils::setDateFromData();
+        bool positionIsValid = GPS_Utils::getData();
+        if (!positionIsValid) {
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "Main", "Could not fix GPS position. Will not TX LoRa");
+        } else {
+            bool gps_time_update = gps.time.isUpdated();
+            bool gps_loc_update  = gps.location.isUpdated();
+            GPS_Utils::setDateFromData();
 
-        int currentSpeed = (int) gps.speed.kmph();
+            int currentSpeed = (int) gps.speed.kmph();
 
-        if (gps_loc_update) Utils::checkStatus();
+            if (gps_loc_update) Utils::checkStatus();
 
-        if (!sendUpdate && gps_loc_update && smartBeaconActive) {
-            GPS_Utils::calculateDistanceTraveled();
-            if (!sendUpdate) GPS_Utils::calculateHeadingDelta(currentSpeed);
-            STATION_Utils::checkStandingUpdateTime();
+            if (!sendUpdate && gps_loc_update && smartBeaconActive) {
+                GPS_Utils::calculateDistanceTraveled();
+                if (!sendUpdate) GPS_Utils::calculateHeadingDelta(currentSpeed);
+                STATION_Utils::checkStandingUpdateTime();
+            }
+            SMARTBEACON_Utils::checkFixedBeaconTime();
+            bool onlySendOnNewPosition = false;
+            if ((sendUpdate && gps_loc_update) || !onlySendOnNewPosition) STATION_Utils::sendBeacon();
+            if (gps_time_update) SMARTBEACON_Utils::checkInterval(currentSpeed);
+
+            if ((millis() - refreshDisplayTime >= 1000 || gps_time_update) && Config.trackerMethod == TrackerMethod::gps) {
+                GPS_Utils::checkStartUpFrames();
+                MENU_Utils::showOnScreen();
+                refreshDisplayTime = millis();
+            }
+            SLEEP_Utils::checkIfGPSShouldSleep();
         }
-        SMARTBEACON_Utils::checkFixedBeaconTime();
-        bool onlySendOnNewPosition = false;
-        if ((sendUpdate && gps_loc_update) || !onlySendOnNewPosition) STATION_Utils::sendBeacon();
-        if (gps_time_update) SMARTBEACON_Utils::checkInterval(currentSpeed);
-
-        if ((millis() - refreshDisplayTime >= 1000 || gps_time_update) && Config.trackerMethod == TrackerMethod::gps) {
-            GPS_Utils::checkStartUpFrames();
-            MENU_Utils::showOnScreen();
-            refreshDisplayTime = millis();
-        }
-        SLEEP_Utils::checkIfGPSShouldSleep();
     } 
     // else {
     //     if (millis() - lastGPSTime > txInterval) {

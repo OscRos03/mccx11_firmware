@@ -133,13 +133,13 @@ namespace GPS_Utils {
         }
     #endif
 
-    void getData() {
-        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS","Getting GPS data. disableGPS=%d", disableGPS);
-        if (disableGPS) return;
+    bool getData() {
+        if (disableGPS) return false;
         #ifdef GPS_I2C
             requestDataViaI2c(); // May need multiple calls to get all data.
         #endif
         while (gpsComm.available() > 0) gps.encode(gpsComm.read());
+        return gps.location.isUpdated() && gps.location.isValid();
     }
 
     void setDateFromData() {
