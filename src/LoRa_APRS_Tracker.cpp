@@ -68,11 +68,14 @@ ____________________________________________________________________*/
 #include "touch_utils.h"
 #endif
 
+#define WIFI_LOGGER
+#ifdef WIFI_LOGGER
+#endif
+
 
 String      versionDate             = "2026-01-20";
 String      versionNumber           = "2.4.2";
 Configuration                       Config;
-HardwareSerial                      gpsSerial(1);
 TinyGPSPlus                         gps;
 #ifdef HAS_BT_CLASSIC
     BluetoothSerial                 SerialBT;
@@ -100,7 +103,7 @@ bool        bluetoothActive         = Config.bluetooth.active;
 bool        bluetoothConnected      = false;
 
 uint32_t    lastTx                  = 0.0;
-uint32_t    txInterval              = 60000L;
+uint32_t    txInterval              = 5000L;
 uint32_t    lastTxTime              = 0;
 double      lastTxLat               = 0.0;
 double      lastTxLng               = 0.0;
@@ -120,18 +123,39 @@ TrackerMethod trackerMethod;
 APRSPacket                          lastReceivedPacket;
 
 logging::Logger                     logger;
-//#define DEBUG
+// #define DEBUG
 
 extern bool gpsIsActive;
 
+
 void setup() {
-    Config.trackerMethod = TrackerMethod::wifi;
+    Config.trackerMethod = TrackerMethod::gps;
     Serial.begin(115200);
 
-    #ifndef DEBUG
+    //! ---------------- Blink -------------
+    // #define LED_USER 21
+    // pinMode(LED_USER, OUTPUT);
+
+    // for (int i = 0; i < 5; i++){
+    //     logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "LED", "Blink!");
+    //     // turn the LED on (HIGH is the voltage level)
+    //     digitalWrite(LED_USER, HIGH);
+    //     // wait a short time
+    //     delay(250);
+    //     // turn the LED off by making the voltage LOW
+    //     digitalWrite(LED_USER, LOW);
+    //     // wait a short time
+    //     delay(250);
+    // }
+    //! ---------------- Blink -------------
+
+    #ifdef DEBUG
+        Serial.println("Press any button...");
+        while (Serial.available() == 0) {delay(50);} // Allow USB time to connect
         logger.setDebugLevel(logging::LoggerLevel::LOGGER_LEVEL_INFO);
     #endif
-
+    Serial.println("Serial connected");
+    
     POWER_Utils::setup();
     displaySetup();
     POWER_Utils::externalPinSetup();
@@ -142,11 +166,16 @@ void setup() {
     startupScreen(loraIndex, versionDate);
 
     // WIFI_Utils::networkScanner(); // doesnt belong in setup, should the old AP func be here still?
+    WIFI_Utils::checkIfWiFiAP();
 
     MSG_Utils::loadNumMessages();
     GPS_Utils::setup();
     currentLoRaType = &Config.loraTypes[loraIndex];
+    
+    
+    logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "LoRa", "LoRa setup start");
     LoRa_Utils::setup();
+    logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "LoRa", "LoRa setup finished");
     Utils::i2cScannerForPeripherals();
     WX_Utils::setup();
 
@@ -181,6 +210,7 @@ void setup() {
 }
 
 void loop() {
+
     currentBeacon = &Config.beacons[myBeaconsIndex];
     if (statusUpdate) {
         if (APRSPacketLib::checkNocall(currentBeacon->callsign)) {
@@ -232,7 +262,7 @@ void loop() {
     STATION_Utils::checkListenedStationsByTimeAndDelete();
 
     lastTx = millis() - lastTxTime;
-    if (gpsIsActive && Config.trackerMethod == TrackerMethod::gps) {
+    if (gpsIsActive && Config.trackerMethod == TrackerMethod::gps && lastTx >= txInterval) {
         GPS_Utils::getData();
         bool gps_time_update = gps.time.isUpdated();
         bool gps_loc_update  = gps.location.isUpdated();
@@ -248,7 +278,8 @@ void loop() {
             STATION_Utils::checkStandingUpdateTime();
         }
         SMARTBEACON_Utils::checkFixedBeaconTime();
-        if (sendUpdate && gps_loc_update) STATION_Utils::sendBeacon();
+        bool onlySendOnNewPosition = false;
+        if ((sendUpdate && gps_loc_update) || !onlySendOnNewPosition) STATION_Utils::sendBeacon();
         if (gps_time_update) SMARTBEACON_Utils::checkInterval(currentSpeed);
 
         if ((millis() - refreshDisplayTime >= 1000 || gps_time_update) && Config.trackerMethod == TrackerMethod::gps) {
@@ -275,9 +306,14 @@ void loop() {
         // currently probably cant be else
         // sleep for a while then attempt again
     }
-    logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"SLEEP","Going to sleep...");
-    long DEEP_SLEEP_TIME_SEC = 60; // 60 seconds
-    esp_sleep_enable_timer_wakeup(1000000ULL * DEEP_SLEEP_TIME_SEC);
-    delay(500);
-    esp_deep_sleep_start();
+    LoRa_Utils::sleepRadio(); //! Should force it to sleep, but needs RTC pull-up
+    delay(1000);
+
+    #if defined(DEEP_SLEEP_TIME_SEC_LOOP) && (DEEP_SLEEP_TIME_SEC_LOOP > 0)
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"SLEEP","Going to sleep...");
+        // delay(500); //! Ruins efficiency but is needed to have time to print
+        esp_sleep_enable_timer_wakeup(1000000ULL * DEEP_SLEEP_TIME_SEC_LOOP);
+        esp_deep_sleep_start();
+    #endif
+    
 }

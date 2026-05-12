@@ -27,6 +27,7 @@ namespace WIFI_Utils {
     void startAutoAP();
     void checkIfWiFiAP();
     void scanAndLog();
+    bool connectHomeNetwork(const char* ssid, const char* password);
 
 }
 

@@ -26,6 +26,8 @@ extern      logging::Logger     logger;
 extern      TrackerMethod       trackerMethod;
 String      home                = "TP-Link_AC1C_2.4GHz";
 
+#define CONNECTION_TIMEOUT 10
+
 uint32_t    noClientsTime        = 0;
 
 struct savedNetwork {
@@ -99,31 +101,16 @@ namespace WIFI_Utils {
         }
         
         
-        // if (numOfNW == 0) {
-        //     Serial.println("no nearby networks");
-        //     Config.trackerMethod = TrackerMethod::gps;
-        // } else {
-        //     for (int i=0; i<numOfNW; i++) {
-                // Serial.printf("Network #%d SSID: %s RSSI: %d \n\n", i+1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
-        //         if (WiFi.SSID(i) == home) {    // naive approach
-        //             Serial.println("Tracker is home.\n");
-        //         }
-        //     }
-        // }
         uint32_t after = millis();
-        switch (found) {
-            case true: {
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","On home network");
-                break;
-            }
-            case false: {
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found, discovered networks:");
-                for (int i = 0; i < allSavedNetworks.size(); i++) {
-                    Serial.printf("Network #%d SSID: %s BSSID: %s\n",i,allSavedNetworks[i].SSID.c_str(),allSavedNetworks[i].BSSID.c_str());
-                }
-                break;
+        if (found){
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","On home network");
+        } else {
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","Home network not found, discovered networks:");
+            for (int i = 0; i < allSavedNetworks.size(); i++) {
+                Serial.printf("Network #%d SSID: %s BSSID: %s\n",i,allSavedNetworks[i].SSID.c_str(),allSavedNetworks[i].BSSID.c_str());
             }
         }
+
         logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"WiFi","time to find networks: %d in ms",after-before);
         //delay(5000);
     }
@@ -135,19 +122,23 @@ namespace WIFI_Utils {
     }
 
     void checkIfWiFiAP() {
-        if (Config.wifiAP.active || Config.beacons[0].callsign == "TEST-7"){
+        if (Config.wifiAP.active || Config.beacons[0].callsign == "NOCALL-7"){
             displayShow(" LoRa APRS", "    ** WEB-CONF **","", "WiFiAP:LoRaTracker-AP", "IP    :   192.168.4.1","");
             logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "WebConfiguration Started!");
             startAutoAP();
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "After startAutoAP");
             WEB_Utils::setup();
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "After WEB_utils::setup()");
             while (true) {
                 if (WiFi.softAPgetStationNum() > 0) {
                     noClientsTime = 0;
+                    logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "WiFi.softAPgetStationNum() > 0");
                 } else {
                     if (noClientsTime == 0) {
                         noClientsTime = millis();
+                        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "noClientsTime: %lu", noClientsTime);
                     } else if ((millis() - noClientsTime) > 2 * 60 * 2000) {
-                        // logger.log(logging::LoggerLevel::LOGGER_INFO, "Main","Eggg");
+                        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "Time is up, stopping WiFi AP");
                         logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "WebConfiguration Stopped!");
                         displayShow("", "", "  STOPPING WiFi AP", 2000);
                         Config.wifiAP.active = false;
@@ -155,11 +146,34 @@ namespace WIFI_Utils {
                         WiFi.softAPdisconnect(true);
                         ESP.restart();
                     }
+                    logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "Long loop, (millis() - noClientsTime): %lu", millis() - noClientsTime);
+                    delay(100);
                 }
             }
         } else {
             WiFi.mode(WIFI_OFF);
             logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "Main", "WiFi controller stopped");
         }
+    }
+
+    bool connectHomeNetwork(const char* ssid, const char* password) {
+        if (!WiFi.mode(WIFI_STA)){
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "WiFi", "Could not enter WiFi STA mode");
+            return false;
+        }
+        WiFi.begin(ssid, password);
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "WiFi", "Connecting to WiFi...");
+
+
+        int i = 0;
+        while (WiFi.status() != WL_CONNECTED) {
+            delay(1000);
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "WiFi", "Seconds elapsed: %d", ++i);
+            if (i >= CONNECTION_TIMEOUT){
+                return false;
+            }
+        }
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "WiFi", "Connected, IP Address: %s", WiFi.localIP());
+        return true;
     }
 }

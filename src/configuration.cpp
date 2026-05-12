@@ -412,7 +412,7 @@ void Configuration::setDefaultValues() {
 }
 
 Configuration::Configuration() {
-    if (!SPIFFS.begin(false)) {
+    if (!SPIFFS.begin(false)) { //! Maybe try using True to format it
         Serial.println("SPIFFS Mount Failed");
         return;
     } else {

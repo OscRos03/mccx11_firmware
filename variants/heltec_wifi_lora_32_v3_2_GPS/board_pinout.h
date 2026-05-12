@@ -45,8 +45,8 @@
     //  OTHER
     #define BUTTON_PIN          0
     #define BATTERY_PIN         1
-    #define VEXT_CTRL           36
-    #define ADC_CTRL            37
+    #define VEXT_CTRL           36 // Actually ADC_CTRL
+    #define ADC_CTRL            37 // Actually VEXT_CTRL
 
     #define BOARD_I2C_SDA       41
     #define BOARD_I2C_SCL       42

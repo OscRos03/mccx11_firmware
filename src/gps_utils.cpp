@@ -36,9 +36,18 @@
     #define GPS_BAUD    9600
 #endif
 
+#ifdef GPS_I2C
+    #include <Wire.h>
+    TwoWire gpsComm = Wire;
+    #define GPS_ADDR 66
+    #define GPS_REG_AVAILABLE_DATA 0xFD
+    #define GPS_CHUNK_SIZE 256 // Crash if above 300 on separate test
+#else
+    HardwareSerial gpsComm(1);
+#endif
+
 
 extern Configuration        Config;
-extern HardwareSerial       gpsSerial;
 extern TinyGPSPlus          gps;
 extern Beacon               *currentBeacon;
 extern logging::Logger      logger;
@@ -81,7 +90,13 @@ namespace GPS_Utils {
             delay(200);
         #endif
         
-        gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_TX, GPS_RX);
+        #ifdef GPS_I2C
+            bool started = gpsComm.begin(GPS_SDA, GPS_SCL, 100000);
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS", "GPS I2C started %d", started);
+        #else
+            gpsComm.begin(GPS_BAUD, SERIAL_8N1, GPS_TX, GPS_RX);
+        #endif
+
     }
 
     void calculateDistanceCourse(const String& callsign, double checkpointLatitude, double checkPointLongitude) {
@@ -91,9 +106,40 @@ namespace GPS_Utils {
         STATION_Utils::orderListenedStationsByDistance(callsign, distanceKm, courseTo);
     }
 
+    #ifdef GPS_I2C
+        void requestDataViaI2c() {
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS", "Request GPS data via I2C");
+
+            gpsComm.beginTransmission(GPS_ADDR);
+            gpsComm.write(GPS_REG_AVAILABLE_DATA);
+            uint8_t err = gpsComm.endTransmission(false);
+            uint8_t size = gpsComm.requestFrom(GPS_ADDR, 2, static_cast<int>(true));
+            if (err)
+            {
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "GPS", "GPS I2C Error: %d", err);
+                return;
+            }
+            
+            uint8_t msb = gpsComm.read();
+            uint8_t lsb = gpsComm.read();
+            
+            uint16_t available_bytes = (msb << 8) | lsb;
+            
+            if (available_bytes > 0){
+                int chunk = min(available_bytes, static_cast<uint16_t>(GPS_CHUNK_SIZE));
+                size = gpsComm.requestFrom(GPS_ADDR, chunk);
+            }
+            
+        }
+    #endif
+
     void getData() {
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS","Getting GPS data. disableGPS=%d", disableGPS);
         if (disableGPS) return;
-        while (gpsSerial.available() > 0) gps.encode(gpsSerial.read());
+        #ifdef GPS_I2C
+            requestDataViaI2c(); // May need multiple calls to get all data.
+        #endif
+        while (gpsComm.available() > 0) gps.encode(gpsComm.read());
     }
 
     void setDateFromData() {
@@ -139,13 +185,13 @@ namespace GPS_Utils {
         if (disableGPS) return;
         if ((millis() > 10000 && gps.charsProcessed() < 10)) {
             // old code for logging that gps can't get signal
-            // logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "GPS",
-            //             "No GPS frames detected! Try to reset the GPS Chip with this "
-            //             "firmware: https://github.com/richonguzman/TTGO_T_BEAM_GPS_RESET");
-            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS", "No GPS signal, switching to WiFi scanning...");
-            displayShow("ERROR", "No GPS frames!", "Switching to WiFi scanning...", 2000);
-            Config.trackerMethod = TrackerMethod::wifi;
-            return;
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "GPS",
+                        "No GPS frames detected! Try to reset the GPS Chip with this "
+                        "firmware: https://github.com/richonguzman/TTGO_T_BEAM_GPS_RESET");
+            // logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "GPS", "No GPS signal, switching to WiFi scanning...");
+            displayShow("ERROR", "No GPS frames!", "Reset the GPS chip", 2000);
+            // Config.trackerMethod = TrackerMethod::wifi;
+            // return;
         }
     }
 

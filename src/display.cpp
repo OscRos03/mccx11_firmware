@@ -16,14 +16,41 @@
  * along with LoRa APRS Tracker. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "display.h"
 #include <logger.h>
+
+#ifdef NO_DISPLAY // If NO_DISPLAY is defined, we provide empty implementations for the display functions to avoid compilation errors.
+    extern logging::Logger logger;
+
+    uint8_t     screenBrightness        = 1;    //! Prevents compilation error
+    bool        symbolAvailable         = true; //! Prevents compilation error
+
+
+    void displaySetup() {}
+    void displayToggle(bool toggle) {}
+    void displayShow(const String& header, const String& line1, const String& line2, int wait) {
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "DISPLAY", "Header: '%s', Line 1: '%s', Line 2: '%s', Wait: %i", header.c_str(), line1.c_str(), line2.c_str(), wait);
+        delay(wait);
+    }
+    void drawSymbol(int symbolIndex, bool bluetoothActive) {}
+    void displayShow(const String& header, const String& line1, const String& line2, const String& line3, const String& line4, const String& line5, int wait) {
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "DISPLAY", "Header: '%s', Line 1: '%s', Line 2: '%s', Line 3: '%s', Line 4: '%s', Line 5: '%s', Wait: %i", header.c_str(), line1.c_str(), line2.c_str(), line3.c_str(), line4.c_str(), line5.c_str(), wait);
+        delay(wait);
+    }
+    void startupScreen(uint8_t index, const String& version) {
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "RichonGuzman (CA2RXU) --> LoRa APRS Tracker/Station");
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "Version: %s", version.c_str());
+    }
+    String fillMessageLine(const String& line, const int& length) {return String();}
+#else // NO_DISPLAY
+
+
 #include <Wire.h>
 #include "custom_characters.h"
 #include "custom_colors.h"
 #include "configuration.h"
 #include "station_utils.h"
 #include "board_pinout.h"
-#include "display.h"
 #include "TimeLib.h"
 
 
@@ -571,3 +598,5 @@ String fillMessageLine(const String& line, const int& length) {
     }
     return completeLine;
 }
+
+#endif // NO_DISPLAY

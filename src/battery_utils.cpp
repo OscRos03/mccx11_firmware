@@ -118,7 +118,7 @@ namespace BATTERY_Utils {
         #elif defined(BATTERY_PIN)
             if (batteryMeasurmentTime == 0 || (millis() - batteryMeasurmentTime) > 30 * 1000){ //At least 30 seconds have to pass between measurements
                 #ifdef ADC_CTRL
-                    switch(measuringState){
+                    switch(measuringState){ //! Should not work correctly due to wrong pin, but Vext is never turned off so it still works anyways!
                         case 0:     // Initial Measurement
                             POWER_Utils::adc_ctrl_ON();
                             adcCtrlTime = millis();
