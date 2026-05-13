@@ -24,6 +24,8 @@
 #include "board_pinout.h"
 #include "lora_utils.h"
 #include "display.h"
+#include "driver/rtc_io.h"
+
 
 extern logging::Logger  logger;
 extern Configuration    Config;
@@ -249,6 +251,9 @@ namespace LoRa_Utils {
 
     void sleepRadio() {
         radio.sleep();
+        rtc_gpio_pulldown_dis((gpio_num_t) RADIO_CS_PIN);
+        rtc_gpio_pullup_en((gpio_num_t) RADIO_CS_PIN);
+        esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
     }
 
 }

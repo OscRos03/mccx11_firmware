@@ -19,12 +19,13 @@
 #include "board_pinout.h"
 #include "sleep_utils.h"
 #include "power_utils.h"
-
+#include "driver/rtc_io.h"
 
 extern uint32_t         lastGPSTime;
 extern bool             gpsIsActive;
 
 bool gpsShouldSleep     = false;
+
 
 
 namespace SLEEP_Utils {
@@ -39,6 +40,9 @@ namespace SLEEP_Utils {
                 //
             }
         #endif
+        rtc_gpio_pullup_dis((gpio_num_t) GPS_SLEEP);
+        rtc_gpio_pulldown_en((gpio_num_t) GPS_SLEEP);
+        esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
     }
 
     void gpsWakeUp() {

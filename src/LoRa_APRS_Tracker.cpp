@@ -125,8 +125,18 @@ logging::Logger                     logger;
 extern bool gpsIsActive;
 
 
+#define MODE_LORA           1
+#define MODE_DUTY_CYCLE     2
+#define MODE_GNSS           3
+#define MODE_SLEEP          4
+#define MODE_WIFI           5
+#define MODE MODE_GNSS
+
 void setup() {
     Config.trackerMethod = TrackerMethod::gps;
+    #if MODE == MODE_WIFI
+        Config.trackerMethod = TrackerMethod::wifi;
+    #endif
     Serial.begin(115200);
 
     //! ---------------- Blink -------------
@@ -204,6 +214,13 @@ void setup() {
     logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "Main", "Smart Beacon is: %s", Utils::getSmartBeaconState());
     logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "Setup Done!");
     menuDisplay = 0;
+
+    #if MODE != MODE_GNSS && MODE != MODE_DUTY_CYCLE
+        SLEEP_Utils::gpsSleep();
+    #endif
+    #if MODE != MODE_LORA && MODE != MODE_DUTY_CYCLE
+        LoRa_Utils::sleepRadio();
+    #endif
 }
 
 void loop() {
@@ -236,23 +253,26 @@ void loop() {
         TOUCH_Utils::loop();
     #endif
 
-    ReceivedLoRaPacket packet = LoRa_Utils::receivePacket();
+    #ifndef MODE
+        ReceivedLoRaPacket packet = LoRa_Utils::receivePacket();
 
-    MSG_Utils::checkReceivedMessage(packet);
-    MSG_Utils::processOutputBuffer();
-    MSG_Utils::clean15SegBuffer();
+        MSG_Utils::checkReceivedMessage(packet);
+        MSG_Utils::processOutputBuffer();
+        MSG_Utils::clean15SegBuffer();
 
-    if (bluetoothActive && bluetoothConnected) {
-        if (Config.bluetooth.useBLE) {
-            BLE_Utils::sendToPhone(packet.text.substring(3));
-            BLE_Utils::sendToLoRa();
-        } else {
-            #ifdef HAS_BT_CLASSIC
-                BLUETOOTH_Utils::sendToPhone(packet.text.substring(3));
-                BLUETOOTH_Utils::sendToLoRa();
-            #endif
+        if (bluetoothActive && bluetoothConnected) {
+            if (Config.bluetooth.useBLE) {
+                BLE_Utils::sendToPhone(packet.text.substring(3));
+                BLE_Utils::sendToLoRa();
+            } else {
+                #ifdef HAS_BT_CLASSIC
+                    BLUETOOTH_Utils::sendToPhone(packet.text.substring(3));
+                    BLUETOOTH_Utils::sendToLoRa();
+                #endif
+            }
         }
-    }
+    #endif
+
 
     MSG_Utils::ledNotification();
     Utils::checkFlashlight();
@@ -260,7 +280,12 @@ void loop() {
 
     lastTx = millis() - lastTxTime;
     if (gpsIsActive && Config.trackerMethod == TrackerMethod::gps && lastTx >= txInterval) {
-        bool positionIsValid = GPS_Utils::getData();
+        #if MODE == MODE_GNSS || MODE == MODE_DUTY_CYCLE
+            bool positionIsValid = GPS_Utils::getData();
+        #else
+            bool positionIsValid = true;
+        #endif
+
         if (!positionIsValid) {
             logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "Main", "Could not fix GPS position. Will not TX LoRa");
         } else {
@@ -269,8 +294,10 @@ void loop() {
             GPS_Utils::setDateFromData();
 
             int currentSpeed = (int) gps.speed.kmph();
-
-            if (gps_loc_update) Utils::checkStatus();
+            
+            #ifndef MODE
+                if (gps_loc_update) Utils::checkStatus();
+            #endif
 
             if (!sendUpdate && gps_loc_update && smartBeaconActive) {
                 GPS_Utils::calculateDistanceTraveled();
@@ -278,8 +305,14 @@ void loop() {
                 STATION_Utils::checkStandingUpdateTime();
             }
             SMARTBEACON_Utils::checkFixedBeaconTime();
-            bool onlySendOnNewPosition = false;
-            if ((sendUpdate && gps_loc_update) || !onlySendOnNewPosition) STATION_Utils::sendBeacon();
+
+            #ifndef MODE
+                bool onlySendOnNewPosition = false;
+                if ((sendUpdate && gps_loc_update) || !onlySendOnNewPosition) STATION_Utils::sendBeacon();
+            #elif MODE == MODE_LORA || MODE == MODE_DUTY_CYCLE
+                STATION_Utils::sendBeacon();
+            #endif
+
             if (gps_time_update) SMARTBEACON_Utils::checkInterval(currentSpeed);
 
             if ((millis() - refreshDisplayTime >= 1000 || gps_time_update) && Config.trackerMethod == TrackerMethod::gps) {
@@ -308,7 +341,11 @@ void loop() {
         // sleep for a while then attempt again
     }
     LoRa_Utils::sleepRadio(); //! Should force it to sleep, but needs RTC pull-up
-    delay(1000);
+    
+    delay(200);
+
+    esp_sleep_enable_timer_wakeup(1000000ULL * 10);
+    esp_deep_sleep_start();
 
     #if defined(DEEP_SLEEP_TIME_SEC_LOOP) && (DEEP_SLEEP_TIME_SEC_LOOP > 0)
         logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO,"SLEEP","Going to sleep...");

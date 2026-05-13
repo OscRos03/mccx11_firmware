@@ -38,7 +38,7 @@
     // #define GPS_SCL             17
     #define GPS_RX              43
     #define GPS_TX              44
-
+    #define GPS_SLEEP           5
 
     //  OTHER
     #define BUTTON_PIN          0
