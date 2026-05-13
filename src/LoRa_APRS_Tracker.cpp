@@ -100,7 +100,7 @@ bool        bluetoothActive         = Config.bluetooth.active;
 bool        bluetoothConnected      = false;
 
 uint32_t    lastTx                  = 0.0;
-uint32_t    txInterval              = 5000L;
+uint32_t    txInterval              = 15000L;
 uint32_t    lastTxTime              = 0;
 double      lastTxLat               = 0.0;
 double      lastTxLng               = 0.0;

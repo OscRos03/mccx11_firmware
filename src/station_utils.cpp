@@ -255,6 +255,14 @@ namespace STATION_Utils {
 
         if (Config.bluetooth.useBLE) BLE_Utils::sendToPhone(packet);   // send Tx packets to Phone too
 
+        File configFile = SPIFFS.open("/tx.log", "a");
+        if (!configFile) {
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "TX_LOG", "Error: Could not open config file for writing");
+        }
+        
+        configFile.printf("Y:%u, M:%u, D:%u, H:%u, m:%u, s:%u, lat:%f, long:%f\n", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.location.lat(), gps.location.lng()); // time, lat, long
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "TX_LOG", "Y:%u, M:%u, D:%u, H:%u, m:%u, s:%u, lat:%f, long:%f\n", gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second(), gps.location.lat(), gps.location.lng());
+
         if (shouldSleepLowVoltage) POWER_Utils::shutdown();
         
         if (smartBeaconActive) {

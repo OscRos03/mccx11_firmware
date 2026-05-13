@@ -53,7 +53,7 @@
 	"other": {
 		"simplifiedTrackerMode": false,
 		"sendCommentAfterXBeacons": 10,
-		"path": "WIDE1-1",
+		"path": "WIDE1-0",
 		"nonSmartBeaconRate": 15,
 		"rememberStationTime": 30,
 		"standingUpdateTime": 15,
